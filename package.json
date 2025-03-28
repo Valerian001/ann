@@ -9,6 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@hello-pangea/dnd": "^18.0.1",
     "next": "15.2.4",
     "pdfjs-dist": "^4.8.69",
     "react": "^19.0.0",

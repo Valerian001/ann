@@ -4,9 +4,9 @@ import { useState, useRef } from 'react';
 import { Document, Page, pdfjs } from 'react-pdf';
 import { useDropzone } from 'react-dropzone';
 import SignatureCanvas from 'react-signature-canvas';
-import Draggable from 'react-draggable';
 import 'react-pdf/dist/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';
+import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 
 pdfjs.GlobalWorkerOptions.workerSrc = new URL(
   'pdfjs-dist/build/pdf.worker.min.mjs',
@@ -30,7 +30,17 @@ export default function PDFSigner() {
 
   const addSignature = () => {
     const signatureData = sigCanvas.current.getCanvas().toDataURL('image/png');
-    setSignatures([...signatures, { id: Date.now(), data: signatureData, x: 50, y: 50 }]);
+    setSignatures([...signatures, { id: Date.now().toString(), data: signatureData, x: 50, y: 50 }]);
+  };
+
+  const onDragEnd = (result) => {
+    if (!result.destination) return;
+
+    const updatedSignatures = [...signatures];
+    const [movedSignature] = updatedSignatures.splice(result.source.index, 1);
+    updatedSignatures.splice(result.destination.index, 0, movedSignature);
+
+    setSignatures(updatedSignatures);
   };
 
   return (
@@ -41,25 +51,40 @@ export default function PDFSigner() {
       </div>
       {file && (
         <div className="relative mt-4">
-          <Document
-            file={file}
-            onLoadSuccess={({ numPages }) => setNumPages(numPages)}
-          >
+          <Document file={file} onLoadSuccess={({ numPages }) => setNumPages(numPages)}>
             {Array.from(new Array(numPages), (el, index) => (
               <Page key={`page_${index + 1}`} pageNumber={index + 1} />
             ))}
           </Document>
-          {signatures.map((sig) => (
-            <Draggable
-            key={sig.id}
-            defaultPosition={{ x: sig.x, y: sig.y }}
-            onStop={(event, data) => handleDrag(sig.id, event, data)}
-          >
-            <div style={{ position: 'absolute', cursor: 'move' }}>
-              <img src={sig.data} alt="Signature" className="w-32 h-auto" />
-            </div>
-          </Draggable>
-          ))}
+          <DragDropContext onDragEnd={onDragEnd}>
+            <Droppable droppableId="signatures">
+              {(provided) => (
+                <div ref={provided.innerRef} {...provided.droppableProps}>
+                  {signatures.map((sig, index) => (
+                    <Draggable key={sig.id} draggableId={sig.id} index={index}>
+                      {(provided) => (
+                        <div
+                          ref={provided.innerRef}
+                          {...provided.draggableProps}
+                          {...provided.dragHandleProps}
+                          style={{
+                            position: 'absolute',
+                            left: sig.x,
+                            top: sig.y,
+                            cursor: 'move',
+                            ...provided.draggableProps.style,
+                          }}
+                        >
+                          <img src={sig.data} alt="Signature" className="w-32 h-auto" />
+                        </div>
+                      )}
+                    </Draggable>
+                  ))}
+                  {provided.placeholder}
+                </div>
+              )}
+            </Droppable>
+          </DragDropContext>
         </div>
       )}
       <div className="mt-4 border p-2">
