@@ -367,20 +367,22 @@ export default function PDFSigner() {
 
           if (anno.type === "highlight") {
             // Draw a semi-transparent rectangle for highlighting
+            const { r, g, b } = hexToRgb(anno.color);
             page.drawRectangle({
               x,
               y,
               width: rect.width,
               height: rect.height,
-              color: hexToRgb(anno.color, 0.3),
-            })
+              color: { type: 'RGB', red: r, green: g, blue: b, opacity: 0.1 },
+            });
           } else if (anno.type === "underline") {
             // Draw a line for underlining
+            const { r, g, b } = hexToRgb(anno.color);
             page.drawLine({
               start: { x, y },
               end: { x: x + rect.width, y },
               thickness: 1,
-              color: hexToRgb(anno.color),
+              color: { type: 'RGB', red: r, green: g, blue: b, opacity: 0.3 },color: { type: 'RGB', red: r, green: g, blue: b },
             })
           }
         }
@@ -454,7 +456,7 @@ export default function PDFSigner() {
     const b = parseInt(hex.substring(4, 6), 16) / 255;
     
     // Return the color in the format pdf-lib expects
-    return { red: r, green: g, blue: b, opacity: alpha };
+    return { r, g, b };
   };
 
   // Render annotations
