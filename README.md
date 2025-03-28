@@ -102,6 +102,12 @@ npm run start
 - **Challenge**: Embedding annotations in the exported PDF while preserving them across different PDF viewers.
 - **Solution**: Used **pdf-lib** to manipulate the PDF document and add annotations programmatically before export.
 
+### 3. PDF Export with Annotations
+
+- **Challenge**: getting highlighing to stop redacting text when exported 
+- **Solution**: currently unsolved
+
+
 ## Future Improvements
 
 With more time, I would add the following features:
@@ -116,8 +122,7 @@ With more time, I would add the following features:
 8. **Annotation Search**: Allow users to search through comments and highlighted text.
 9. **Performance Optimization**: Improve rendering performance for large documents.
 10. **Accessibility Improvements**: Ensure the application is fully accessible to users with disabilities.
+11. **login and signup**: Ensure the application is fully accessible to users by improving scalabilty.
 
-## License
 
-This project is licensed under the MIT License.
 
