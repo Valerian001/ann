@@ -4,7 +4,10 @@ import { useDropzone } from 'react-dropzone';
 import SignatureCanvas from 'react-signature-canvas';
 import Draggable from 'react-draggable';
 
-pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.js`;
+pdfjs.GlobalWorkerOptions.workerSrc = new URL(
+  'pdfjs-dist/build/pdf.worker.min.mjs',
+  import.meta.url,
+).toString();
 
 export default function PDFSigner() {
   const [file, setFile] = useState(null);
