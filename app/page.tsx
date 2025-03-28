@@ -177,13 +177,13 @@ export default function PDFSigner() {
     )
   }
 
-  const stopDragging = () => {
+  const stopDragging = (_event: React.MouseEvent<Element, MouseEvent>) => {
     setSignatures((prev) => prev.map((sig) => ({ ...sig, isDragging: false })))
     setComments((prev) => prev.map((comment) => ({ ...comment, isDragging: false })))
   }
 
   // Handle text selection for highlighting and underlining
-  const handleTextSelection = () => {
+  const handleTextSelection = (_event: React.MouseEvent<Element, MouseEvent>) => {
     if (!currentTool || (currentTool !== "highlight" && currentTool !== "underline")) return
 
     const selection = window.getSelection()
@@ -257,6 +257,12 @@ export default function PDFSigner() {
       setTempCommentPosition({ x, y, pageNumber })
     }
   }
+
+  const handleMouseUp = (event: React.MouseEvent) => {
+    stopDragging(event);
+    handleTextSelection(event);
+  };
+
 
   const addComment = () => {
     if (tempCommentPosition && newComment.trim()) {
@@ -655,9 +661,9 @@ export default function PDFSigner() {
             className="relative flex-grow border rounded-lg overflow-auto max-h-[70vh]"
             ref={pdfContainerRef}
             onMouseMove={onDragging}
-            onMouseUp={stopDragging}
+            onMouseUp={handleMouseUp}
             onClick={handleDocumentClick}
-            onMouseUp={handleTextSelection}
+            // onMouseUp={handleTextSelection}
           >
             <Document file={file} onLoadSuccess={({ numPages }) => setNumPages(numPages)} className="mx-auto">
               {Array.from(new Array(numPages), (el, index) => (
