@@ -6,7 +6,7 @@ import { useState, useRef, useEffect } from "react"
 import { Document, Page, pdfjs } from "react-pdf"
 import { useDropzone } from "react-dropzone"
 import SignatureCanvas from "react-signature-canvas"
-import { PDFDocument } from "pdf-lib"
+import { PDFDocument, rgb } from "pdf-lib"
 import "react-pdf/dist/Page/AnnotationLayer.css"
 import "react-pdf/dist/Page/TextLayer.css"
 import { Pen, Highlighter, Underline, MessageSquare, Download, Trash2, X, Check } from "lucide-react"
@@ -372,7 +372,8 @@ export default function PDFSigner() {
               y,
               width: rect.width,
               height: rect.height,
-              color: { type: 'RGB', red: r, green: g, blue: b, opacity: 0. },
+              color: rgb(r / 255, g / 255, b / 255),
+              opacity: 0.5,
             });
           } else if (anno.type === "underline") {
             // Draw a line for underlining
@@ -381,7 +382,7 @@ export default function PDFSigner() {
               start: { x, y },
               end: { x: x + rect.width, y },
               thickness: 1,
-              color: { type: 'RGB', red: r, green: g, blue: b },
+              color: rgb(r / 255, g / 255, b / 255),
             })
           }
         }
@@ -399,18 +400,15 @@ export default function PDFSigner() {
           x: comment.x,
           y: height - comment.y,
           size: 10,
-          color: hexToRgb("#FFC107"),
+          color: rgb(hexToRgb("#FFC107").r, hexToRgb("#FFC107").g, hexToRgb("#FFC107").b),
         })
 
         // Add the comment text as a note annotation
-        page.addAnnotation({
-          type: "Text",
-          page,
-          content: comment.text,
-          position: {
-            x: comment.x,
-            y: height - comment.y,
-          },
+        page.drawText(comment.text, {
+          x: comment.x,
+          y: height - comment.y - 10, // Adjust y-coordinate for better positioning
+          size: 10,
+          color: rgb(0, 0, 0), // Black text color
         })
       }
 
