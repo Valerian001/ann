@@ -1,8 +1,12 @@
+"use client"
+
 import { useState, useRef } from 'react';
 import { Document, Page, pdfjs } from 'react-pdf';
 import { useDropzone } from 'react-dropzone';
 import SignatureCanvas from 'react-signature-canvas';
 import Draggable from 'react-draggable';
+import 'react-pdf/dist/Page/AnnotationLayer.css';
+import 'react-pdf/dist/Page/TextLayer.css';
 
 pdfjs.GlobalWorkerOptions.workerSrc = new URL(
   'pdfjs-dist/build/pdf.worker.min.mjs',
@@ -25,7 +29,7 @@ export default function PDFSigner() {
   });
 
   const addSignature = () => {
-    const signatureData = sigCanvas.current.getTrimmedCanvas().toDataURL('image/png');
+    const signatureData = sigCanvas.current.getCanvas().toDataURL('image/png');
     setSignatures([...signatures, { id: Date.now(), data: signatureData, x: 50, y: 50 }]);
   };
 
@@ -46,9 +50,15 @@ export default function PDFSigner() {
             ))}
           </Document>
           {signatures.map((sig) => (
-            <Draggable key={sig.id} defaultPosition={{ x: sig.x, y: sig.y }}>
-              <img src={sig.data} alt="Signature" className="absolute cursor-move w-32 h-auto" />
-            </Draggable>
+            <Draggable
+            key={sig.id}
+            defaultPosition={{ x: sig.x, y: sig.y }}
+            onStop={(event, data) => handleDrag(sig.id, event, data)}
+          >
+            <div style={{ position: 'absolute', cursor: 'move' }}>
+              <img src={sig.data} alt="Signature" className="w-32 h-auto" />
+            </div>
+          </Draggable>
           ))}
         </div>
       )}
