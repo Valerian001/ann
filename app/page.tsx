@@ -21,7 +21,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 
 pdfjs.GlobalWorkerOptions.workerSrc = new URL("pdfjs-dist/build/pdf.worker.min.mjs", import.meta.url).toString()
 
-// Define annotation types
+//annotation types
 type AnnotationType = "highlight" | "underline" | "comment" | "signature"
 
 interface Signature {
@@ -81,7 +81,7 @@ export default function PDFSigner() {
   const onDrop = (acceptedFiles: File[]) => {
     if (acceptedFiles.length > 0) {
       setFile(acceptedFiles[0])
-      // Reset annotations when loading a new file
+      // annotations ae reset when loading a new file
       setSignatures([])
       setTextAnnotations([])
       setComments([])
@@ -182,22 +182,22 @@ export default function PDFSigner() {
     setComments((prev) => prev.map((comment) => ({ ...comment, isDragging: false })))
   }
 
-  // Handle text selection for highlighting and underlining
+  // text selection handling for highlighting and underlining
   const handleTextSelection = () => {
     if (!currentTool || (currentTool !== "highlight" && currentTool !== "underline")) return
 
     const selection = window.getSelection()
     if (!selection || selection.isCollapsed) return
 
-    // Get the selected text
+
     const selectedText = selection.toString().trim()
     if (!selectedText) return
 
-    // Get the bounding client rect of the selection
+ 
     const range = selection.getRangeAt(0)
     const boundingRect = range.getBoundingClientRect()
 
-    // Get all client rects for the selection (for multi-line selections)
+
     const rects: DOMRect[] = []
     for (let i = 0; i < range.getClientRects().length; i++) {
       rects.push(range.getClientRects()[i])
@@ -216,7 +216,7 @@ export default function PDFSigner() {
       }
     }
 
-    // Calculate position relative to the PDF container
+    // Calculating position relative to the PDF container
     const containerRect = pdfContainerRef.current?.getBoundingClientRect() || new DOMRect()
     const relativeRects = rects.map((rect) => {
       return new DOMRect(rect.left - containerRect.left, rect.top - containerRect.top, rect.width, rect.height)
@@ -229,7 +229,7 @@ export default function PDFSigner() {
       boundingRect.height,
     )
 
-    // Add the text annotation
+    // Adding the text annotation
     setTextAnnotations([
       ...textAnnotations,
       {
@@ -335,9 +335,8 @@ export default function PDFSigner() {
         const sigImage = await pdfDoc.embedPng(sig.data)
 
         // Calculate position (convert from DOM coordinates to PDF coordinates)
-        // In PDF, the origin (0,0) is at the bottom-left corner
-        const sigWidth = 150 // Approximate width of signature
-        const sigHeight = 50 // Approximate height of signature
+        const sigWidth = 150 // Approximate width
+        const sigHeight = 50 // Approximate height
 
         // Position signature on the page
         // Note: We need to flip the y-coordinate because PDF coordinates start from bottom-left
