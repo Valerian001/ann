@@ -329,7 +329,7 @@ export default function PDFSigner() {
         if (sig.pageNumber > pages.length) continue
 
         const page = pages[sig.pageNumber - 1]
-        const { width, height } = page.getSize()
+        const { height } = page.getSize()
 
         // Convert signature data URL to image
         const sigImage = await pdfDoc.embedPng(sig.data)
@@ -356,7 +356,7 @@ export default function PDFSigner() {
         if (anno.pageNumber > pages.length) continue
 
         const page = pages[anno.pageNumber - 1]
-        const { width, height } = page.getSize()
+        const { height } = page.getSize()
 
         // For each rectangle in the annotation
         for (const rect of anno.position.rects) {
@@ -392,7 +392,7 @@ export default function PDFSigner() {
         if (comment.pageNumber > pages.length) continue
 
         const page = pages[comment.pageNumber - 1]
-        const { width, height } = page.getSize()
+        const { height } = page.getSize()
 
         // Add a comment annotation to the PDF
         page.drawCircle({
@@ -445,7 +445,7 @@ export default function PDFSigner() {
   }
 
   // Add this helper function to convert hex color to RGB for PDF-lib
-  const hexToRgb = (hex: string, alpha = 1) => {
+  const hexToRgb = (hex: string) => {
     // Remove the hash if it exists
     hex = hex.replace('#', '');
     
