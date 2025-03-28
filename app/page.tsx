@@ -373,7 +373,7 @@ export default function PDFSigner() {
               y,
               width: rect.width,
               height: rect.height,
-              color: { type: 'RGB', red: r, green: g, blue: b, opacity: 0.1 },
+              color: { type: 'RGB', red: r, green: g, blue: b, opacity: 0. },
             });
           } else if (anno.type === "underline") {
             // Draw a line for underlining
@@ -382,7 +382,7 @@ export default function PDFSigner() {
               start: { x, y },
               end: { x: x + rect.width, y },
               thickness: 1,
-              color: { type: 'RGB', red: r, green: g, blue: b, opacity: 0.3 },color: { type: 'RGB', red: r, green: g, blue: b },
+              color: { type: 'RGB', red: r, green: g, blue: b },
             })
           }
         }
