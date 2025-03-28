@@ -1,8 +1,8 @@
 "use client"
 
-import type React from "react"
+import React from "react"
 
-import { useState, useRef } from "react"
+import { useState, useRef, useEffect } from "react"
 import { Document, Page, pdfjs } from "react-pdf"
 import { useDropzone } from "react-dropzone"
 import SignatureCanvas from "react-signature-canvas"
@@ -177,13 +177,13 @@ export default function PDFSigner() {
     )
   }
 
-  const stopDragging = (_event: React.MouseEvent<Element, MouseEvent>) => {
+  const stopDragging = () => {
     setSignatures((prev) => prev.map((sig) => ({ ...sig, isDragging: false })))
     setComments((prev) => prev.map((comment) => ({ ...comment, isDragging: false })))
   }
 
   // Handle text selection for highlighting and underlining
-  const handleTextSelection = (_event: React.MouseEvent<Element, MouseEvent>) => {
+  const handleTextSelection = () => {
     if (!currentTool || (currentTool !== "highlight" && currentTool !== "underline")) return
 
     const selection = window.getSelection()
@@ -216,6 +216,19 @@ export default function PDFSigner() {
       }
     }
 
+    // Calculate position relative to the PDF container
+    const containerRect = pdfContainerRef.current?.getBoundingClientRect() || new DOMRect()
+    const relativeRects = rects.map((rect) => {
+      return new DOMRect(rect.left - containerRect.left, rect.top - containerRect.top, rect.width, rect.height)
+    })
+
+    const relativeBoundingRect = new DOMRect(
+      boundingRect.left - containerRect.left,
+      boundingRect.top - containerRect.top,
+      boundingRect.width,
+      boundingRect.height,
+    )
+
     // Add the text annotation
     setTextAnnotations([
       ...textAnnotations,
@@ -225,8 +238,8 @@ export default function PDFSigner() {
         color: currentColor,
         pageNumber,
         position: {
-          boundingRect,
-          rects,
+          boundingRect: relativeBoundingRect,
+          rects: relativeRects,
           text: selectedText,
         },
       },
@@ -257,12 +270,6 @@ export default function PDFSigner() {
       setTempCommentPosition({ x, y, pageNumber })
     }
   }
-
-  const handleMouseUp = (event: React.MouseEvent) => {
-    stopDragging(event);
-    handleTextSelection(event);
-  };
-
 
   const addComment = () => {
     if (tempCommentPosition && newComment.trim()) {
@@ -315,12 +322,96 @@ export default function PDFSigner() {
       // Load the PDF document
       const arrayBuffer = await file.arrayBuffer()
       const pdfDoc = await PDFDocument.load(arrayBuffer)
+      const pages = pdfDoc.getPages()
 
-      // TODO: Add annotations to the PDF
-      // This is a simplified version - in a real app, you would need to:
-      // 1. Convert canvas signatures to PDF annotations
-      // 2. Add highlight and underline annotations
-      // 3. Add comment annotations
+      // Process signatures
+      for (const sig of signatures) {
+        if (sig.pageNumber > pages.length) continue
+
+        const page = pages[sig.pageNumber - 1]
+        const { width, height } = page.getSize()
+
+        // Convert signature data URL to image
+        const sigImage = await pdfDoc.embedPng(sig.data)
+
+        // Calculate position (convert from DOM coordinates to PDF coordinates)
+        // In PDF, the origin (0,0) is at the bottom-left corner
+        const sigWidth = 150 // Approximate width of signature
+        const sigHeight = 50 // Approximate height of signature
+
+        // Position signature on the page
+        // Note: We need to flip the y-coordinate because PDF coordinates start from bottom-left
+        const x = sig.x
+        const y = height - sig.y - sigHeight
+
+        page.drawImage(sigImage, {
+          x,
+          y,
+          width: sigWidth,
+          height: sigHeight,
+        })
+      }
+
+      // Process text annotations (highlights and underlines)
+      for (const anno of textAnnotations) {
+        if (anno.pageNumber > pages.length) continue
+
+        const page = pages[anno.pageNumber - 1]
+        const { width, height } = page.getSize()
+
+        // For each rectangle in the annotation
+        for (const rect of anno.position.rects) {
+          // Calculate position in PDF coordinates
+          const x = rect.left
+          const y = height - rect.top - rect.height
+
+          if (anno.type === "highlight") {
+            // Draw a semi-transparent rectangle for highlighting
+            page.drawRectangle({
+              x,
+              y,
+              width: rect.width,
+              height: rect.height,
+              color: hexToRgb(anno.color, 0.3),
+            })
+          } else if (anno.type === "underline") {
+            // Draw a line for underlining
+            page.drawLine({
+              start: { x, y },
+              end: { x: x + rect.width, y },
+              thickness: 1,
+              color: hexToRgb(anno.color),
+            })
+          }
+        }
+      }
+
+      // Process comments
+      for (const comment of comments) {
+        if (comment.pageNumber > pages.length) continue
+
+        const page = pages[comment.pageNumber - 1]
+        const { width, height } = page.getSize()
+
+        // Add a comment annotation to the PDF
+        page.drawCircle({
+          x: comment.x,
+          y: height - comment.y,
+          size: 10,
+          color: hexToRgb("#FFC107"),
+        })
+
+        // Add the comment text as a note annotation
+        page.addAnnotation({
+          type: "Text",
+          page,
+          content: comment.text,
+          position: {
+            x: comment.x,
+            y: height - comment.y,
+          },
+        })
+      }
 
       // Save the PDF
       const pdfBytes = await pdfDoc.save()
@@ -351,6 +442,20 @@ export default function PDFSigner() {
       }, 3000)
     }
   }
+
+  // Add this helper function to convert hex color to RGB for PDF-lib
+  const hexToRgb = (hex: string, alpha = 1) => {
+    // Remove the hash if it exists
+    hex = hex.replace('#', '');
+    
+    // Parse the hex values
+    const r = parseInt(hex.substring(0, 2), 16) / 255;
+    const g = parseInt(hex.substring(2, 4), 16) / 255;
+    const b = parseInt(hex.substring(4, 6), 16) / 255;
+    
+    // Return the color in the format pdf-lib expects
+    return { red: r, green: g, blue: b, opacity: alpha };
+  };
 
   // Render annotations
   const renderAnnotations = () => {
@@ -383,40 +488,38 @@ export default function PDFSigner() {
         ))}
 
         {/* Render text annotations (highlights and underlines) */}
-        {textAnnotations.map((anno) => {
-          // This is a simplified version - in a real app, you would need to:
-          // 1. Calculate the position relative to the PDF page
-          // 2. Handle scrolling and zooming
-          // 3. Handle multi-page documents
-
-          // For now, we'll just show a visual representation
-          return (
-            <div
-              key={anno.id}
+        {textAnnotations.map((anno) => (
+          <div key={anno.id} className="group">
+            {anno.position.rects.map((rect, index) => (
+              <div
+                key={`${anno.id}-${index}`}
+                style={{
+                  position: "absolute",
+                  left: rect.left,
+                  top: rect.top,
+                  width: rect.width,
+                  height: rect.height,
+                  backgroundColor: anno.type === "highlight" ? `${anno.color}80` : "transparent",
+                  borderBottom: anno.type === "underline" ? `2px solid ${anno.color}` : "none",
+                  pointerEvents: "none",
+                  zIndex: 5,
+                }}
+              />
+            ))}
+            <Button
+              variant="destructive"
+              size="icon"
+              className="absolute top-0 right-0 h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-auto"
               style={{
-                position: "absolute",
-                left: anno.position.boundingRect.left,
-                top: anno.position.boundingRect.top,
-                width: anno.position.boundingRect.width,
-                height: anno.position.boundingRect.height,
-                backgroundColor: anno.type === "highlight" ? `${anno.color}80` : "transparent",
-                borderBottom: anno.type === "underline" ? `2px solid ${anno.color}` : "none",
-                pointerEvents: "none",
-                zIndex: 5,
+                left: anno.position.boundingRect.left + anno.position.boundingRect.width,
+                top: anno.position.boundingRect.top - 10,
               }}
-              className="group"
+              onClick={() => deleteAnnotation(anno.id, anno.type)}
             >
-              <Button
-                variant="destructive"
-                size="icon"
-                className="absolute -top-2 -right-2 h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-auto"
-                onClick={() => deleteAnnotation(anno.id, anno.type)}
-              >
-                <X className="h-3 w-3" />
-              </Button>
-            </div>
-          )
-        })}
+              <X className="h-3 w-3" />
+            </Button>
+          </div>
+        ))}
 
         {/* Render comments */}
         {comments.map((comment) => (
@@ -491,6 +594,27 @@ export default function PDFSigner() {
       </>
     )
   }
+
+  const memoizedHandleTextSelection = React.useCallback(handleTextSelection, [
+    currentTool,
+    currentColor,
+    pdfContainerRef,
+    textAnnotations,
+  ])
+
+  useEffect(() => {
+    const handleMouseUp = () => {
+      if (currentTool === "highlight" || currentTool === "underline") {
+        memoizedHandleTextSelection()
+      }
+    }
+
+    document.addEventListener("mouseup", handleMouseUp)
+
+    return () => {
+      document.removeEventListener("mouseup", handleMouseUp)
+    }
+  }, [currentTool, memoizedHandleTextSelection])
 
   return (
     <div className="container mx-auto p-4">
@@ -661,9 +785,8 @@ export default function PDFSigner() {
             className="relative flex-grow border rounded-lg overflow-auto max-h-[70vh]"
             ref={pdfContainerRef}
             onMouseMove={onDragging}
-            onMouseUp={handleMouseUp}
+            onMouseUp={stopDragging}
             onClick={handleDocumentClick}
-            // onMouseUp={handleTextSelection}
           >
             <Document file={file} onLoadSuccess={({ numPages }) => setNumPages(numPages)} className="mx-auto">
               {Array.from(new Array(numPages), (el, index) => (
